@@ -50,7 +50,7 @@ export const useChatStore = create<ChatStore>((set, get) => ({
     set((state) => {
       const messages = [...state.messages];
       const lastMessage = messages[messages.length - 1];
-
+  
       if (lastMessage && lastMessage.role === 'assistant') {
         messages[messages.length - 1] = {
           ...lastMessage,
@@ -60,13 +60,13 @@ export const useChatStore = create<ChatStore>((set, get) => ({
       } else {
         messages.push({
           id: crypto.randomUUID(),
-          content,
+          content: content === '<think>...</think>' ? content : content, 
           role: 'assistant',
           timestamp: new Date(),
           streaming: !isComplete,
         });
       }
-
+  
       return { messages, isTyping: !isComplete };
     }),
   updateLastMessage: (content) =>

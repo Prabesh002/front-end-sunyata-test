@@ -1,17 +1,46 @@
-import React from 'react';
 import { User } from 'lucide-react';
 import ReactMarkdown from 'react-markdown';
 import { Prism as SyntaxHighlighter } from 'react-syntax-highlighter';
 import { oneDark } from 'react-syntax-highlighter/dist/esm/styles/prism';
-import { Message } from '../store';
+import { Message } from '../types';
+import { useEffect, useState } from 'react';
 
-interface MessageBubbleProps {
+interface MessageItemProps {
   message: Message;
   animate?: boolean;
 }
 
-export function MessageBubble({ message, animate }: MessageBubbleProps) {
+export function MessageItem({ message, animate }: MessageItemProps) {
   const isBot = message.role === 'assistant';
+  const [thinkingText, setThinkingText] = useState('...');
+
+  // Handle thinking animation
+  useEffect(() => {
+    if (message.content === '<think>...</think>') {
+      const interval = setInterval(() => {
+        setThinkingText((prev) => {
+          if (prev === '...') return '.  ';
+          if (prev === '.  ') return '.. ';
+          if (prev === '.. ') return '...';
+          return '...';
+        });
+      }, 500); // Adjust the speed of the animation here
+      return () => clearInterval(interval);
+    }
+  }, [message.content]);
+
+  // Replace <think>...</think> with the thinking animation
+  const renderContent = () => {
+    if (message.content === '<think>...</think>') {
+      return (
+        <div className="flex items-center gap-1">
+          <span>Thinking</span>
+          <span className="inline-block w-4 text-left">{thinkingText}</span>
+        </div>
+      );
+    }
+    return message.content;
+  };
 
   return (
     <div
@@ -40,12 +69,12 @@ export function MessageBubble({ message, animate }: MessageBubbleProps) {
             <span className="font-medium text-white">
               {isBot ? 'Sunyata AI' : 'You'}
             </span>
-              {isBot && message.model && (
-                  <span className="text-xs text-gray-400 bg-gray-700 px-2 py-1 rounded">
-                    {message.model}
-                </span>
-              )}
-            </div>
+            {isBot && message.model && (
+              <span className="text-xs text-gray-400 bg-gray-700 px-2 py-1 rounded">
+                {message.model}
+              </span>
+            )}
+          </div>
           <div className="prose prose-invert max-w-none">
             <ReactMarkdown
               components={{
@@ -69,7 +98,7 @@ export function MessageBubble({ message, animate }: MessageBubbleProps) {
                 },
               }}
             >
-              {message.content}
+              {renderContent()}
             </ReactMarkdown>
           </div>
         </div>

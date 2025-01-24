@@ -4,6 +4,7 @@ export interface Message {
   role: 'user' | 'assistant';
   timestamp: Date;
   model?: string;
+  streaming?: boolean;
 }
 
 export interface Model {
