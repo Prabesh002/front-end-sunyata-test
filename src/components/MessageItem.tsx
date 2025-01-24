@@ -1,9 +1,9 @@
-import { User } from 'lucide-react';
+import { User, ChevronDown, ChevronUp } from 'lucide-react';
 import ReactMarkdown from 'react-markdown';
 import { Prism as SyntaxHighlighter } from 'react-syntax-highlighter';
 import { oneDark } from 'react-syntax-highlighter/dist/esm/styles/prism';
 import { Message } from '../types';
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useRef } from 'react';
 
 interface MessageItemProps {
   message: Message;
@@ -13,10 +13,40 @@ interface MessageItemProps {
 export function MessageItem({ message, animate }: MessageItemProps) {
   const isBot = message.role === 'assistant';
   const [thinkingText, setThinkingText] = useState('...');
+  const [isExpanded, setIsExpanded] = useState(true);
+  const [showDropdown, setShowDropdown] = useState(false);
+  const dropdownRef = useRef<HTMLDivElement>(null);
 
-  // Handle thinking animation
+  // Extract the thinking content if it exists
+  const thinkMatch = message.content?.match(/<think>(.*?)<\/think>/s);
+  const isThinking = !!thinkMatch;
+  const thinkingContent = thinkMatch ? thinkMatch[1] : null;
+  const contentToRender = thinkMatch
+    ? message.content.replace(`<think>${thinkingContent}</think>`, '')
+    : message.content;
+
   useEffect(() => {
-    if (message.content === '<think>...</think>') {
+    setShowDropdown(isThinking);
+  }, [isThinking]);
+
+  useEffect(() => {
+    function handleClickOutside(event: MouseEvent) {
+      if (dropdownRef.current && !dropdownRef.current.contains(event.target as Node)) {
+        setIsExpanded(false);
+      }
+    }
+
+    if (showDropdown) {
+      document.addEventListener('mousedown', handleClickOutside);
+    }
+
+    return () => {
+      document.removeEventListener('mousedown', handleClickOutside);
+    };
+  }, [showDropdown]);
+
+  useEffect(() => {
+    if (isThinking) {
       const interval = setInterval(() => {
         setThinkingText((prev) => {
           if (prev === '...') return '.  ';
@@ -24,22 +54,38 @@ export function MessageItem({ message, animate }: MessageItemProps) {
           if (prev === '.. ') return '...';
           return '...';
         });
-      }, 500); // Adjust the speed of the animation here
+      }, 500);
       return () => clearInterval(interval);
+    } else {
+      setThinkingText('...');
     }
-  }, [message.content]);
+  }, [isThinking]);
 
-  // Replace <think>...</think> with the thinking animation
-  const renderContent = () => {
-    if (message.content === '<think>...</think>') {
+  const handleToggleExpand = () => {
+    setIsExpanded((prev) => !prev);
+  };
+
+  const renderThinkingIndicator = () => {
+    if (isThinking) {
       return (
-        <div className="flex items-center gap-1">
-          <span>Thinking</span>
-          <span className="inline-block w-4 text-left">{thinkingText}</span>
+        <div className="flex flex-col gap-2">
+          {/* "Sunyata is thinking" text */}
+          <span className="text-sm text-gray-400">Sunyata is thinking</span>
+
+          {/* Dropdown for reasoning */}
+          <div className="relative inline-block" ref={dropdownRef}>
+            <button
+              onClick={handleToggleExpand}
+              className="px-2 py-1 flex items-center gap-1 bg-gray-700 rounded-md hover:bg-gray-600"
+            >
+              <span className="text-sm italic">{isExpanded ? thinkingContent : '...'}</span>
+              {isExpanded ? <ChevronUp className="w-3 h-3" /> : <ChevronDown className="w-3 h-3" />}
+            </button>
+          </div>
         </div>
       );
     }
-    return message.content;
+    return null;
   };
 
   return (
@@ -75,6 +121,7 @@ export function MessageItem({ message, animate }: MessageItemProps) {
               </span>
             )}
           </div>
+          {renderThinkingIndicator()}
           <div className="prose prose-invert max-w-none">
             <ReactMarkdown
               components={{
@@ -98,7 +145,7 @@ export function MessageItem({ message, animate }: MessageItemProps) {
                 },
               }}
             >
-              {renderContent()}
+              {contentToRender}
             </ReactMarkdown>
           </div>
         </div>

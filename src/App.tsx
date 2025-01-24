@@ -12,7 +12,7 @@ const AVAILABLE_MODELS: Model[] = [
   },
   {
     id: 'deepseek-r1',
-    displayName: 'Deepseek R1',
+    displayName: 'sunyata COT',
   },
 ];
 
